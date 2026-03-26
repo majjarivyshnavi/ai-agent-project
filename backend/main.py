@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import json
-from import models
+import models
 from database import engine, Base, SessionLocal
 from routers import mse_onboarding, transaction_ledger, products, snps, matching, analytics, claims, documents, conflicts, partnerships, notifications, system_logs, auth, ai
 from sqlalchemy import text
