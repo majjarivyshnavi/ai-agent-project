@@ -14,4 +14,4 @@ fastapi
 uvicorn
 google-generativeai
 sqlalchemy
-pydantic
+pydantic[email]
