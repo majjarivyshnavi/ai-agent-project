@@ -207,7 +207,7 @@ export default function VoiceNavigator() {
     };
 
     return (
-        <div className="fixed bottom-8 right-8 z-[200] flex flex-col items-end space-y-4">
+        <div className="fixed bottom-30 right-8 z-[200] flex flex-col items-end space-y-4">
             {status !== 'idle' && (
                 <div className="px-6 py-4 rounded-2xl shadow-2xl border backdrop-blur-md min-w-[280px] bg-[#002147] text-white">
                     <div className="flex items-center justify-between mb-2">

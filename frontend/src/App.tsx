@@ -229,10 +229,9 @@ const isAuditor = currentRole === 'nsic' || currentRole === 'admin';
         </div>
       </footer>
 
-      <div className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-40 flex flex-col gap-3">
-        <VoiceNavigator />
-        <Chatbot />
-      </div>
+      <div className="fixed bottom-20 right-6 md:bottom-24 md:right-8 z-40 flex flex-col gap-3">
+  <VoiceNavigator />
+</div>
     </div>
   );
 }

@@ -149,5 +149,4 @@ async def serve_spa(full_path: str):
 
     if index_file.exists():
         return FileResponse(str(index_file))
-
     return JSONResponse(status_code=404, content={"detail": "Frontend build not found"})
