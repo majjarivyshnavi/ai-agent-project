@@ -1,7 +1,10 @@
 fastapi
 uvicorn[standard]
 sqlalchemy
+
 psycopg2-binary
+pymysql
+
 google-generativeai
 pydantic[email]
 python-multipart
@@ -9,10 +12,8 @@ python-jose
 cryptography
 python-dotenv
 passlib[bcrypt]
+
 transformers
-
-
-
 librosa
 soundfile
 numpy
