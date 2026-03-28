@@ -1,10 +1,9 @@
 import axios from 'axios';
-
-const API_URL = "http://localhost:5000"; // mee backend URL
+import config from '../config';
 
 export const addTransaction = async (data: any) => {
   try {
-    const response = await axios.post(`${API_URL}/transactions`, data);
+    const response = await axios.post(`${config.API_BASE_URL}/transactions`, data);
     return response.data;
   } catch (error) {
     throw error;
