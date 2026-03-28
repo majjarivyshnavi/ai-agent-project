@@ -1,7 +1,8 @@
 import React, { useState } from "react";
+import config from "./config";
 
 async function getAIResponse(message: string) {
-  const response = await fetch("http://127.0.0.1:8000/ai", {
+  const response = await fetch(config.AI_BASE_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -11,8 +12,11 @@ async function getAIResponse(message: string) {
     }),
   });
 
-  const data = await response.json();
-  return data;
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  return await response.json();
 }
 
 function Chatbot() {
@@ -31,11 +35,8 @@ function Chatbot() {
       setOutput("Typing... ⏳");
 
       const res = await getAIResponse(input);
-
-      console.log("AI response:", res); // 👈 check console
-
-      setOutput(res.reply);
-      setInput(""); // clear input after sending
+      setOutput(res.reply || "No response received");
+      setInput("");
     } catch (error) {
       console.error("Error:", error);
       setOutput("❌ Error connecting to AI");
