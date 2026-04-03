@@ -3,15 +3,17 @@ import uuid
 import os
 from voice_utils import transcribe_audio, classify_intent
 from product_utils import categorize_product_ai
-
+from transformers import pipeline
+import shutil
 router = APIRouter()
 
 @router.post("/transcribe-command")
 async def transcribe_command(file: UploadFile = File(...)):
     if not os.path.exists("uploads"):
         os.makedirs("uploads")
-        
-    temp_filename = f"cmd_{uuid.uuid4()}.wav"
+
+    ext=os.path.splitext(file.filename)[1] or ".webm"
+    temp_filename = f"cmd_{uuid.uuid4()}{ext}"
     file_path = os.path.join("uploads", temp_filename)
     
     try:
@@ -39,8 +41,9 @@ async def transcribe_command(file: UploadFile = File(...)):
 async def transcribe_voice(file: UploadFile = File(...)):
     if not os.path.exists("uploads"):
         os.makedirs("uploads")
-        
-    temp_filename = f"voice_{uuid.uuid4()}.wav"
+
+    ext=os.path.splitext(file.filename)[1] or ".webm"    
+    temp_filename = f"voice_{uuid.uuid4()}{ext}"
     file_path = os.path.join("uploads", temp_filename)
     
     try:

@@ -56,10 +56,9 @@ function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const toggleMenu = () => setIsMenuOpen(prev => !prev);
   const location = useLocation();
-
+  const path = location.pathname;
+  if (path === '/snp/register')return<SnpRegistration />;
   if (!isAuthenticated) {
-    const path = location.pathname;
-    if (path === '/snp/register') return <SnpRegistration />;
     if (path === '/staff') return <AdminLoginView />;
     if (path === '/onboarding' || path === '/register') return <OnboardingWizard />;
     return <LoginView />;

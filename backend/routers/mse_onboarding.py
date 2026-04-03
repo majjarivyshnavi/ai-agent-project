@@ -9,39 +9,106 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 @router.post("/parse-voice")
-def parse_voice(request: schemas.VoiceParseRequest):
-    text = request.transcript
-    
-    # NLP Mock using Regex for Voice Parsing
-    phone_match = re.search(r'\b\d{10}\b', text)
-    email_match = re.search(r'[\w\.-]+@[\w\.-]+', text)
-    
-    # Extract name (Assume first few words before "is" or "my name is")
-    # This is a basic rule-based NLP parser for the demo
-    name = ""
-    contact_person = ""
-    
-    # Try finding "my name is X" (English, Hindi, Tamil)
-    cp_match = re.search(r'(my name is|i am|mera naam|peyar) ([a-zA-Z\s\u0900-\u097F\u0B80-\u0BFF]+?)( and|\.|,| hai| aagum|$)', text, re.IGNORECASE)
-    if cp_match:
-        contact_person = cp_match.group(2).strip()
-    
-    # Try finding business name
-    biz_match = re.search(r'(enterprise is|business is|company is|business name|enterprise name|run|named|vyapar|niruvanam) ([a-zA-Z\s\u0900-\u097F\u0B80-\u0BFF]+?)( and|\.|,| hai| aagum|$)', text, re.IGNORECASE)
-    if biz_match:
-        name = biz_match.group(2).strip()
-    
-    # If not found, use a fallback
-    if not name and len(text.split()) > 0:
-        name = "Voice Registered Biz"
-        
-    return {
-        "name": name.title() if name else "",
-        "contact_person": contact_person.title() if contact_person else "",
-        "phone": phone_match.group(0) if phone_match else "",
-        "email": email_match.group(0) if email_match else "",
-        "description": text
+def parse_voice(data: dict):
+    transcript = data.get("transcript", "").strip()
+
+    import re
+
+    result = {
+        "name": "",
+        "contact_person": "",
+        "phone": "",
+        "email": "",
+        "description": "",
+        "sector": "",
+        "address": "",
+        "city": "",
+        "state": "",
+        "pincode": ""
     }
+
+    normalized = " ".join(transcript.split())
+
+    # Enterprise / business name
+    name_match = re.search(
+        r"(business name|enterprise name)\s+(.+?)(?=\s+(contact person|authorised official|authorized official|phone|phone number|email|description|business objective|sector|address|city|state|pincode|postal pincode)\b|$)",
+        normalized,
+        re.IGNORECASE
+    )
+    if name_match:
+        result["name"] = name_match.group(2).strip(" ,.")
+
+    # Contact person / authorised official
+    contact_match = re.search(
+        r"(contact person|authorised official|authorized official)\s+(.+?)(?=\s+(phone|phone number|email|description|business objective|sector|address|city|state|pincode|postal pincode)\b|$)",
+        normalized,
+        re.IGNORECASE
+    )
+    if contact_match:
+        result["contact_person"] = contact_match.group(2).strip(" ,.")
+
+    # Phone
+    phone_match = re.search(r"([6-9]\d{9})", normalized)
+    if phone_match:
+        result["phone"] = phone_match.group(1)
+
+    # Email
+    email_match = re.search(r"([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})", normalized)
+    if email_match:
+        result["email"] = email_match.group(1)
+
+    # Description
+    desc_match = re.search(
+        r"(description|business objective)\s+(.+?)(?=\s+(sector|address|city|state|pincode|postal pincode)\b|$)",
+        normalized,
+        re.IGNORECASE
+    )
+    if desc_match:
+        result["description"] = desc_match.group(2).strip(" ,.")
+
+    # Sector
+    sector_match = re.search(
+        r"(sector|industrial sector)\s+(.+?)(?=\s+(address|city|state|pincode|postal pincode)\b|$)",
+        normalized,
+        re.IGNORECASE
+    )
+    if sector_match:
+        result["sector"] = sector_match.group(2).strip(" ,.")
+
+    # Address
+    address_match = re.search(
+        r"(address|registered address)\s+(.+?)(?=\s+(city|state|pincode|postal pincode)\b|$)",
+        normalized,
+        re.IGNORECASE
+    )
+    if address_match:
+        result["address"] = address_match.group(2).strip(" ,.")
+
+    # City
+    city_match = re.search(
+        r"(city)\s+(.+?)(?=\s+(state|pincode|postal pincode)\b|$)",
+        normalized,
+        re.IGNORECASE
+    )
+    if city_match:
+        result["city"] = city_match.group(2).strip(" ,.")
+
+    # State
+    state_match = re.search(
+        r"(state)\s+(.+?)(?=\s+(pincode|postal pincode)\b|$)",
+        normalized,
+        re.IGNORECASE
+    )
+    if state_match:
+        result["state"] = state_match.group(2).strip(" ,.")
+
+    # Pincode
+    pincode_match = re.search(r"\b(\d{6})\b", normalized)
+    if pincode_match:
+        result["pincode"] = pincode_match.group(1)
+
+    return result
+
 
 @router.post("/register", response_model=schemas.RegistrationResponse, status_code=status.HTTP_201_CREATED)
 def register_mse(mse: schemas.MSESubmit, db: Session = Depends(get_db)):

@@ -118,7 +118,7 @@ export default function OnboardingWizard() {
     const handleVoiceStart = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const recorder = new MediaRecorder(stream);
+            const recorder = new MediaRecorder(stream,{mimeType:'audio/webm'});
             mediaRecorder.current = recorder;
             audioChunks.current = [];
 
@@ -127,9 +127,9 @@ export default function OnboardingWizard() {
             };
 
             recorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
+                const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
                 const formData = new FormData();
-                formData.append('file', audioBlob, 'recording.wav');
+                formData.append('file', audioBlob, 'recording.webm');
 
                 try {
                     // 1. Transcribe Audio
@@ -137,16 +137,31 @@ export default function OnboardingWizard() {
                     const transcript = transcribeRes.data.transcript;
 
                     // 2. Parse entities from transcript
-                    const parseRes = await axios.post(`${config.API_BASE_URL}/mses/parse-voice`, { transcript });
-                    const { name, contact_person, phone, email, description } = parseRes.data;
-
+                    const res = await axios.post(`${config.API_BASE_URL}/mses/parse-voice`, { transcript });
+                    const {
+                        name,
+                        contact_person,
+                        phone,
+                        email,
+                        description,
+                        sector,
+                        address,
+                        city,
+                        state,
+                        pincode
+                    } = res.data;
                     setFormData((prev: OnboardingData) => ({
                         ...prev,
                         name: name || prev.name,
                         contact_person: contact_person || prev.contact_person,
                         phone: phone || prev.phone,
                         email: email || prev.email,
-                        description: description
+                        description: description || prev.description,
+                        sector: sector || prev.sector,
+                        address: address || prev.address,
+                        city: city || prev.city,
+                        state: state || prev.state,
+                        pincode: pincode || prev.pincode
                     }));
                 } catch (err) {
                     console.error("Voice processing failed", err);
@@ -349,46 +364,65 @@ export default function OnboardingWizard() {
     );
 
     const handleVoiceSimulation = () => {
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            alert("ASR not supported in this browser. Please use Chrome/Edge.");
-            return;
-        }
+    const SpeechRecognition =
+        (window as any).SpeechRecognition ||
+        (window as any).webkitSpeechRecognition;
 
-        const recognition = new SpeechRecognition();
-        recognition.lang = i18n.language === 'hi' ? 'hi-IN' : 'en-IN';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
+    if (!SpeechRecognition) {
+        alert("Voice recognition is not supported in this browser. Please use Chrome or Edge.");
+        return;
+    }
 
-        setIsListening(true);
-        recognition.start();
+    const recognition = new SpeechRecognition();
+    recognition.lang = i18n.language === 'hi' ? 'hi-IN' : 'en-IN';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
 
-        recognition.onresult = async (event: any) => {
+    setIsListening(true);
+    recognition.start();
+
+    recognition.onresult = async (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        console.log("Voice transcript:", transcript);
+
+        try {
+            const res = await axios.post(`${config.API_BASE_URL}/mses/parse-voice`, { transcript });
+            const { name, contact_person, phone, email, description ,sector,address,city,state,pincode} = res.data;
+
+            setFormData((prev: OnboardingData) => ({
+                ...prev,
+                name: name || prev.name,
+                contact_person: contact_person || prev.contact_person,
+                phone: phone || prev.phone,
+                email: email || prev.email,
+                description: description || prev.description,
+                sector:sector||prev.sector,
+                address:address||prev.address,
+                city:city||prev.city,
+                state:state||prev.state,
+                pincode:pincode||prev.pincode
+            }));
+        } catch (e) {
+            console.error("NLP extraction failed", e);
+            setFormData((prev: OnboardingData) => ({
+                ...prev,
+                description: transcript || prev.description
+            }));
+        } finally {
             setIsListening(false);
-            const transcript = event.results[0][0].transcript;
-
-            try {
-                const res = await axios.post(`${config.API_BASE_URL}/mses/parse-voice`, { transcript });
-                const { name, contact_person, phone, email, description } = res.data;
-
-                setFormData((prev: OnboardingData) => ({
-                    ...prev,
-                    name: name || prev.name,
-                    contact_person: contact_person || prev.contact_person,
-                    phone: phone || prev.phone,
-                    email: email || prev.email,
-                    description: description
-                }));
-            } catch (e) {
-                console.error("NLP extraction failed", e);
-                setFormData((prev: OnboardingData) => ({ ...prev, description: transcript }));
-            }
-        };
-
-        recognition.onerror = () => setIsListening(false);
-        recognition.onend = () => setIsListening(false);
+        }
     };
 
+    recognition.onerror = (event: any) => {
+        console.error("Speech recognition error:", event);
+        setIsListening(false);
+        alert("Voice recognition failed. Please try again.");
+    };
+
+    recognition.onend = () => {
+        setIsListening(false);
+    };
+};
     const handleSubmit = async () => {
         setLoading(true);
         try {
@@ -460,8 +494,17 @@ export default function OnboardingWizard() {
                 return;
             }
             console.error(error);
-            const errorMessage = error.response?.data?.detail || 'Failed to save business profile. Please try again.';
-            alert(errorMessage);
+            const detail = error.response?.data?.detail;
+const errorMessage =
+  typeof detail === 'string'
+    ? detail
+    : Array.isArray(detail)
+    ? detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ')
+    : detail
+    ? JSON.stringify(detail)
+    : 'Failed to save business profile. Please try again.';
+
+alert(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -695,10 +738,7 @@ export default function OnboardingWizard() {
                     {step === STEP_BASICS && (
                         <div className="space-y-8 fade-in duration-500">
                             <button
-                                onMouseDown={handleVoiceStart}
-                                onMouseUp={handleVoiceStop}
-                                onTouchStart={handleVoiceStart}
-                                onTouchEnd={handleVoiceStop}
+                                onClick={handleVoiceSimulation}
                                 className={`w-full p-6 rounded-2xl border-2 border-dashed flex items-center justify-between transition-all ${isListening ? 'bg-orange-50 border-orange-600' : 'bg-slate-50 border-slate-200 hover:border-[#002147]/30 hover:bg-slate-100'}`}
                             >
                                 <div className="flex items-center space-x-5">

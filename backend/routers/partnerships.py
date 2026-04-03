@@ -18,11 +18,9 @@ def get_mse_partnerships(mse_id: int, current_user: dict = Depends(auth.get_curr
 @router.get("/{snp_id}", response_model=List[schemas.PartnershipResponse], dependencies=[Depends(auth.RoleChecker(["snp", "nsic", "admin"]))])
 def get_snp_partnerships(snp_id: int, current_user: dict = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     if current_user["role"] == "snp":
-        snp = db.query(models.SNP).filter(models.SNP.email == current_user["email"]).first()
-        if not snp or snp.snp_id != snp_id:
+        if current_user.get("profile_id") != snp_id:
             raise HTTPException(status_code=403, detail="Not authorized to view partnerships for this SNP")
     return db.query(models.Partnership).filter(models.Partnership.snp_id == snp_id).options(sqlalchemy.orm.joinedload(models.Partnership.mse)).all()
-
 from .notifications import send_external_notification
 from typing import Literal
 
@@ -46,8 +44,7 @@ def update_partnership_status(
         if not mse or mse.mse_id != partnership.mse_id:
             raise HTTPException(status_code=403, detail="Not authorized to act on this partnership")
     elif user_role == "snp":
-        snp = db.query(models.SNP).filter(models.SNP.email == current_user["email"]).first()
-        if not snp or snp.snp_id != partnership.snp_id:
+        if current_user.get("profile_id")!=partnership.snp_id:
             raise HTTPException(status_code=403, detail="Not authorized to act on this partnership")
 
     if action == "approve":

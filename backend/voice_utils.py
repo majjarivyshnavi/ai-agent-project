@@ -1,7 +1,7 @@
-#from transformers import pipeline
+import soundfile as sf 
+from transformers import pipeline
 import os
-#import torch
-#import numpy as np
+import torch
 import librosa
 import soundfile as sf
 from product_utils import get_classifier
@@ -32,10 +32,7 @@ def transcribe_audio(audio_path: str):
         return {"error": "Audio file not found"}
 
     try:
-        audio_data, samplerate = sf.read(audio_path)
-        if samplerate != 16000:
-            audio_data = librosa.resample(audio_data, orig_sr=samplerate, target_sr=16000)
-        
+        audio_data, samplerate = librosa.load(audio_path, sr=16000, mono=True)
         result = asr_pipeline(audio_data)
         return {"text": result["text"], "chunks": result.get("chunks", [])}
     except Exception as e:

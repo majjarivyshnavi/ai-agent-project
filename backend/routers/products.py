@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 import models, schemas, auth
 from database import get_db
+from product_utils import categorize_product_ai
 #from product_utils import categorize_product_ai
 
 router = APIRouter()
